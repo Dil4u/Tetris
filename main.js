@@ -11,6 +11,8 @@ function get_cell(row, col){
 }
 
 
+
+
 function random(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -98,15 +100,17 @@ class Figure{
     constructor(pos, number){
         this.cells = figures(pos, number);
         this.color = colors[random(0, colors.length - 1)];
-        this.left = Math.min(...this.cells.map(cells => cells.x));
-        this.right = Math.max(...this.cells.map(cells => cells.x));
+        this.maxLeft = Math.min(...this.cells.map(cells => cells.x));
+        this.maxRight = Math.max(...this.cells.map(cells => cells.x));
+        this.maxTop = Math.min(...this.cells.map(cells => cells.y));
+        this.maxBottom = Math.max(...this.cells.map(cells => cells.y));
         this.calculate_bottom();
         this.active = true;
     }
 
     calculate_bottom(){
         let lista = [];
-        for (let current_x = this.left; current_x < this.right+1; current_x++){
+        for (let current_x = this.maxLeft; current_x < this.maxRight+1; current_x++){
             let current_y = 0;
             for (let j = 0; j < this.cells.length; j++){
                 if (this.cells[j].x == current_x){
@@ -118,6 +122,38 @@ class Figure{
             lista.push({x: current_x, y: current_y});
         }
         this.bottom = lista;
+    }
+
+    calculate_left(){
+        let lista = [];
+        for (let current_y = this.maxTop; current_y < this.maxBottom+1; current_y++){
+            let current_x = 9;
+            for (let j = 0; j < this.cells.length; j++){
+                if (this.cells[j].y == current_y){
+                    if (current_x > this.cells[j].x){
+                        current_x = this.cells[j].x;
+                    }
+                }
+            }
+            lista.push({x: current_x, y: current_y});
+        }
+        this.left = lista;
+    }
+
+    calculate_right(){
+        let lista = [];
+        for (let current_y = this.maxTop; current_y < this.maxBottom+1; current_y++){
+            let current_x = 0;
+            for (let j = 0; j < this.cells.length; j++){
+                if (this.cells[j].y == current_y){
+                    if (current_x < this.cells[j].x){
+                        current_x = this.cells[j].x;
+                    }
+                }
+            }
+            lista.push({x: current_x, y: current_y});
+        }
+        this.right = lista;
     }
 
     stable(){
@@ -133,7 +169,6 @@ class Figure{
 
     move_y(){
         if (!this.stable()){
-            console.log("moving");
             this.cells.forEach(cell => cell.y++); // move down
         }else{
             if (this.active){
@@ -145,19 +180,40 @@ class Figure{
     }
 
     move_x(direction){
-        this.cells.forEach(cell => {cell.x = cells + direction;})
+        if (this.maxLeft + direction >= 0 && this.maxRight + direction <= 9){
+            this.clear();
+            this.cells.forEach(cell => {cell.x = cell.x + direction})
+            this.draw();
+            this.update_extremes();
+        }
     }
 
     update(){
+        this.clear()
+        this.move_y(); // calculate new position
+        this.calculate_bottom();
+        this.draw();
+    }
 
+    clear(){
         this.cells.forEach(cell => {// clear
             matrix.rows[cell.y].cells[cell.x].style.backgroundColor = "black";
         });
-        this.move_y(); // calculate new position
-        this.calculate_bottom();
+    }
+
+    draw(){
         this.cells.forEach(cell => {// draw
             matrix.rows[cell.y].cells[cell.x].style.backgroundColor = this.color;
         });
+    }
+
+    update_extremes(){
+        this.maxLeft = Math.min(...this.cells.map(cells => cells.x));
+        this.maxRight = Math.max(...this.cells.map(cells => cells.x));
+    }
+
+    posible_move(direction){
+        
     }
 
     rotate(){
@@ -173,6 +229,7 @@ class Line3 extends Figure{
     }
 
     rotate(){
+        this.clear();
         if (this.state == "vertical"){
             if (this.center.x == 0){
                 this.move(1)
@@ -181,11 +238,15 @@ class Line3 extends Figure{
             }
             this.cells[0] = {x: this.center.x - 1, y: this.center.y}
             this.cells[2] = {x: this.center.x + 1, y: this.center.y}
+            this.state = "horizontal";
         }else{
             this.cells[0] = {x: this.center.x, y: this.center.y - 1}
             this.cells[2] = {x: this.center.x, y: this.center.y + 1}
+            this.state = "vertical";
         }
+        this.draw();
         this.calculate_bottom();
+        this.update_extremes();
     }
 
 }
@@ -197,22 +258,29 @@ class Line2 extends Figure{
         this.center = this.cells[0];
     }
     rotate(){
+        this.clear();
         if (this.state == 0){
             this.cells[1] = {x: this.center.x, y: this.center.y + 1};
+            this.state++;
         }else if (this.state == 1){
             if (this.center.x == 0){
                 this.move(1);
             }
             this.cells[1] = {x: this.center.x - 1, y: this.center.y};
+            this.state++;
         }else if (this.state == 2){
             this.cells[1] = {x: this.center.x, y: this.center.y - 1};
+            this.state++;
         } else if (this.state == 3){
             if (this.center.x == 9){
                 this.move(-1);
             }
             this.cells[1] = {x: this.center.x + 1, y: this.center.y};
+            this.state = 0;
         }
+        this.draw();
         this.calculate_bottom();
+        this.update_extremes();
     }
 }
 
@@ -230,6 +298,7 @@ class Lnormal extends Figure{
     }
 
     rotate(){
+        this.clear();
         if (this.state == 0){
             if (this.center.x == 0){
                 this.move(1);
@@ -242,7 +311,7 @@ class Lnormal extends Figure{
             this.cells[0] = {x: this.center.x, y: this.center.y + 1};
             this.cells[2] = {x: this.center.x, y: this.center.y -1 };
             this.cells[3] = {x: this.center.x - 1, y: this.center.y - 1};
-            this.state == 2;
+            this.state = 2;
         }else if (this.state == 2){
             if (this.center.x == 9){
                 this.move(-1);
@@ -257,7 +326,9 @@ class Lnormal extends Figure{
             this.cells[3] = {x: this.center.x + 1, y: this.center.y + 1};
             this.state = 0;
         }
+        this.draw();
         this.calculate_bottom();
+        this.update_extremes();
     }
 }
 
@@ -269,6 +340,7 @@ class Lmirrored extends Figure{
     }
 
     rotate(){
+        this.clear();
         if (this.state == 0){
             if (this.center.x == 9){
                 this.move(-1);
@@ -286,17 +358,19 @@ class Lmirrored extends Figure{
             if (this.center.x == 0){
                 this.move(1);
             }
-            this.cells[0] = {x: this.center.x, y: this.center.y + 1};
-            this.cells[2] = {x: this.center.x, y: this.center.y - 1};
-            this.cells[3] = {x: this.center.x + 1, y: this.center.y - 1};
-            this.state = 3;
-        }else if (this.state == 3){
             this.cells[0] = {x: this.center.x - 1, y: this.center.y};
             this.cells[2] = {x: this.center.x + 1, y: this.center.y};
-            this.cells[3] = {x: this.center.x + 1, y: this.center.y - 1};
+            this.cells[3] = {x: this.center.x + 1, y: this.center.y + 1};
+            this.state = 3;
+        }else if (this.state == 3){
+            this.cells[0] = {x: this.center.x, y: this.center.y - 1};
+            this.cells[2] = {x: this.center.x, y: this.center.y + 1};
+            this.cells[3] = {x: this.center.x - 1, y: this.center.y + 1};
             this.state = 0;
         }
+        this.draw();
         this.calculate_bottom();
+        this.update_extremes();
     }
 }
 
@@ -308,27 +382,31 @@ class T_piece extends Figure{
     }
 
     rotate(){
+        this.clear();
         if (this.state == 0){
-            this.cells[2] == {x: this.center.x, y: this.center.y - 1};
+            this.cells[2] = {x: this.center.x, y: this.center.y - 1};
             this.state = 1;
         }else if (this.state == 1){
             if (this.center.x == 9){
                 this.move(-1);
             }
-            this.cells[3] == {x: this.center.x + 1, y: this.center.y};
+            this.cells[3] = {x: this.center.x + 1, y: this.center.y};
             this.state = 2;
         }else if (this.state == 2){
-            this.cells[0] == {x: this.center.x, y: this.center.y + 1};
+            this.cells[0] = {x: this.center.x, y: this.center.y + 1};
             this.state = 3;
         }else if (this.state == 3){
             if (this.center.x == 0){
                 this.move(1);
             }
-            this.cells[0] == {x: this.center.x - 1, y: this.center.y};
-            this.cells[2] == {x: this.center.x + 1, y: this.center.y}
-            this.cells[3] == {x: this.center.x, y: this.center.y - 1};
+            this.cells[0] = {x: this.center.x - 1, y: this.center.y};
+            this.cells[2] = {x: this.center.x + 1, y: this.center.y}
+            this.cells[3] = {x: this.center.x, y: this.center.y + 1};
             this.state = 0;
         }
+        this.draw();
+        this.calculate_bottom();
+        this.update_extremes();
     }
 }
 
@@ -337,23 +415,56 @@ class T_piece extends Figure{
 var current_figures = [];
 
 function update_figures(){
-    console.log("updating figures")
     current_figures.forEach(figure => figure.update());
 }
 
 
 function createFigure(){
-    console.log("creating figure")
     current_figures.push(new pieces[random(0, pieces.length - 1)]());
+    //current_figures.push(new T_piece());
+    active_figure = current_figures[current_figures.length - 1];
 
 }
 
 
 var pieces = [Line3, Line2, Square, Lnormal, Lmirrored, T_piece]
 
+
+
 createFigure();
-setInterval(update_figures, 1000); // update figures every second
+var interval = setInterval(update_figures, 1000); // update figures every second
 
 
+document.addEventListener('keydown', function(event) {
+    if(event.key == "ArrowUp") {
+        active_figure.rotate();
+    }
+});
 
+
+// updating time
+let isArrowDownPressed = false;
+document.addEventListener('keydown', function(event) {
+    if(event.key == "ArrowDown" && !isArrowDownPressed) {
+        clearInterval(interval);
+        interval = setInterval(update_figures, 200);
+        isArrowDownPressed = true;
+    }
+});
+document.addEventListener('keyup', function(event) {
+    if(event.key == "ArrowDown" && isArrowDownPressed) {
+        clearInterval(interval);
+        interval = setInterval(update_figures, 1000);
+        isArrowDownPressed = false;
+    }
+});
+
+// move left right
+document.addEventListener('keydown', function(event) {
+    if(event.key == "ArrowLeft") {
+        active_figure.move_x(-1);
+    }else if(event.key == "ArrowRight"){
+        active_figure.move_x(1);
+    }
+});
 

@@ -4,11 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="style.css">
-    <script src="main.js"></script>
+  
     <title>TETRIS</title>
+    <style>
+        .cell{
+            width: auto;
+            height: 50px;
+            background-color: black;
+        }
+
+    </style>
 </head>
 <body>
     <table id="matrix">
+        <tr class="preload">
+            <td class="cell" id="-4,0"></td>
+            <td class="cell" id="-4,1"></td>
+            <td class="cell" id="-4,2"></td>
+            <td class="cell" id="-4,3"></td>
+            <td class="cell" id="-4,4"></td>
+            <td class="cell" id="-4,5"></td>
+            <td class="cell" id="-4,6"></td>
+            <td class="cell" id="-4,7"></td>
+            <td class="cell" id="-4,8"></td>
+            <td class="cell" id="-4,9"></td>
+        </tr>
         <tr class="preload">
             <td class="cell" id="-3,0"></td>
             <td class="cell" id="-3,1"></td>
@@ -167,4 +187,5 @@
         </tr>
     </table>
 </body>
+<script src="main.js"></script>
 </html>

@@ -4,9 +4,7 @@
     width: 60%
 }
 
-.cell{
-    width: auto;
-    height: 50px;
-    background-color: black;
-
+html{
+    background-color: dimgray;
 }
+

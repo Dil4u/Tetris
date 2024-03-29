@@ -18,20 +18,31 @@ function random(min, max) {
 }
 
 
-class Piece{
-    constructor(){
-        this.cells = []
+class Cell{
+    constructor(x, y){
+        this.x = x;
+        this.y = y;
+        this.i = y;
+        this.j = x;
+        this.take = false;
+        this.figure = undefined;
     }
 
-    move(direction){// left: 0, right: 1
-        for (let i = 0 ; i < this.cells.length ; i++){
-            this.cells[i].x = this.cells[i].x + direction
-        }
-
-        this.cells.forEach(cell => cell.x = cell.x + direction)
+    set_figure(figure){
+        this.figure = figure;
+        this.take = true;
     }
+
 }
 
+var cellMatrix = [];
+for (let i = 0; i < matrix.rows.length; i++){
+    let row = [];
+    for (let j = 0; j < matrix.rows[0].cells.length; j++){
+        row.push(new Cell(j, i));
+    }
+    cellMatrix.push(row);
+}
 
 
 function figures(start_point, number){
@@ -40,14 +51,14 @@ function figures(start_point, number){
     // horizontal line 3x1
     if (number == 1 && start_point.x < 8){
         for(let i = 0; i < 3; i++){
-            cells.push({x: start_point.x + i, y: start_point.y});
+            cells.push(cellMatrix[start_point.y][start_point.x+i]);
         }
     }
 
     // horizontal line 2x1
     else if (number == 2){
         for(let i = 0; i < 2; i++){
-            cells.push({x: start_point.x + i, y: start_point.y});
+            cells.push(cellMatrix[start_point.y][start_point.x + i]);
         }
     }
 
@@ -55,7 +66,7 @@ function figures(start_point, number){
     else if (number == 3){
         for(let i = 0; i < 2; i++){
             for(let j = 0; j < 2; j++){
-                cells.push({x: start_point.x + i, y: start_point.y + j});
+                cells.push(cellMatrix[start_point.y + i][start_point.x + j]);
             }
         }
     }
@@ -63,26 +74,26 @@ function figures(start_point, number){
     // L 
     else if (number == 4){
         for(let i = 0; i < 3; i++){
-            cells.push({x: start_point.x, y: start_point.y + i});
+            cells.push(cellMatrix[start_point.y + i][start_point.x]);
         }
-        cells.push({x: start_point.x + 1, y: start_point.y + 2});
+        cells.push(cellMatrix[start_point.y + 2][start_point.x + 1]);
     }
 
     // L mirrored
     else if (number == 5){
         for(let i = 0; i < 3; i++){
-            cells.push({x: start_point.x + 1, y: start_point.y + i});
+            cells.push(cellMatrix[start_point.y + i][start_point.x + 1]);
         }
-        cells.push({x: start_point.x, y: start_point.y + 2});
+        cells.push(cellMatrix[start_point.y+2][start_point.x]);
     }
 
 
     // T
     else if (number == 6){
         for(let i = 0; i < 3; i++){
-            cells.push({x: start_point.x + i, y: start_point.y});
+            cells.push(cellMatrix[start_point.y][start_point.x+i]);
         }
-        cells.push({x: start_point.x + 1, y: start_point.y + 1});
+        cells.push(cellMatrix[start_point.y+1][start_point.x+1]);
     }
 
 
@@ -169,7 +180,9 @@ class Figure{
 
     move_y(){
         if (!this.stable()){
-            this.cells.forEach(cell => cell.y++); // move down
+            for (let k = 0; k < this.cells.length; k++) {
+                this.cells[k] = cellMatrix[this.cells[k].i+1][this.cells[k].j] // Change the cells one down
+            }
         }else{
             if (this.active){
                 createFigure();
@@ -182,7 +195,9 @@ class Figure{
     move_x(direction){
         if (this.maxLeft + direction >= 0 && this.maxRight + direction <= 9){
             this.clear();
-            this.cells.forEach(cell => {cell.x = cell.x + direction})
+            for (let k = 0; k < this.cells.length; k++){
+                this.cells[k] = cellMatrix[this.cells[k].i][this.cells[k].j+direction]
+            }
             this.draw();
             this.update_extremes();
         }
@@ -197,7 +212,7 @@ class Figure{
 
     clear(){
         this.cells.forEach(cell => {// clear
-            matrix.rows[cell.y].cells[cell.x].style.backgroundColor = "black";
+            matrix.rows[cell.i].cells[cell.j].style.backgroundColor = "black";
         });
     }
 
@@ -225,23 +240,26 @@ class Line3 extends Figure{
     constructor(){
         super({x: random(0, 7), y: 0}, 1);
         this.state = "horizontal";
-        this.center = this.cells[1]
     }
 
     rotate(){
+        this.center = this.cells[1];
         this.clear();
         if (this.state == "vertical"){
             if (this.center.x == 0){
-                this.move(1)
+                this.move_x(1);
+                this.rotate();
             }else if (this.center.x == 9){
-                this.move(-1)
+                this.move_x(-1);
+                this.rotate();
+            }else{
+                this.cells[0] = cellMatrix[this.center.y][this.center.x - 1];
+                this.cells[2] = cellMatrix[this.center.y][this.center.x + 1];
+                this.state = "horizontal";
             }
-            this.cells[0] = {x: this.center.x - 1, y: this.center.y}
-            this.cells[2] = {x: this.center.x + 1, y: this.center.y}
-            this.state = "horizontal";
-        }else{
-            this.cells[0] = {x: this.center.x, y: this.center.y - 1}
-            this.cells[2] = {x: this.center.x, y: this.center.y + 1}
+        }else{            
+            this.cells[0] = cellMatrix[this.center.y - 1][this.center.x];
+            this.cells[2] = cellMatrix[this.center.y + 1][this.center.x];
             this.state = "vertical";
         }
         this.draw();
@@ -255,28 +273,32 @@ class Line2 extends Figure{
     constructor(){
         super({x: random(0, 8), y: 0}, 2);
         this.state = 0;
-        this.center = this.cells[0];
     }
     rotate(){
+        this.center = this.cells[0];
         this.clear();
         if (this.state == 0){
-            this.cells[1] = {x: this.center.x, y: this.center.y + 1};
+            this.cells[1] = cellMatrix[this.center.y + 1][this.center.x];
             this.state++;
         }else if (this.state == 1){
             if (this.center.x == 0){
-                this.move(1);
+                this.move_x(1);
+                this.rotate();
+            }else{
+                this.cells[1] = cellMatrix[this.center.y][this.center.x - 1];
+                this.state++;
             }
-            this.cells[1] = {x: this.center.x - 1, y: this.center.y};
-            this.state++;
         }else if (this.state == 2){
-            this.cells[1] = {x: this.center.x, y: this.center.y - 1};
+            this.cells[1] = cellMatrix[this.center.y - 1][this.center.x];
             this.state++;
         } else if (this.state == 3){
             if (this.center.x == 9){
-                this.move(-1);
+                this.move_x(-1);
+                this.rotate();
+            }else{
+                this.cells[1] = cellMatrix[this.center.y][this.center.x + 1];
+                this.state = 0;
             }
-            this.cells[1] = {x: this.center.x + 1, y: this.center.y};
-            this.state = 0;
         }
         this.draw();
         this.calculate_bottom();
@@ -294,36 +316,40 @@ class Lnormal extends Figure{
     constructor(){
         super({x: random(0, 8), y: 0}, 4);
         this.state = 0;
-        this.center = this.cells[1];
     }
 
     rotate(){
+        this.center = this.cells[1];
         this.clear();
         if (this.state == 0){
             if (this.center.x == 0){
-                this.move(1);
+                this.move_x(1);
+                this.rotate();
+            }else{
+                this.cells[0] = cellMatrix[this.center.y][this.center.x + 1];
+                this.cells[2] = cellMatrix[this.center.y][this.center.x - 1];
+                this.cells[3] = cellMatrix[this.center.y + 1][this.center.x - 1];
+                this.state = 1;
             }
-            this.cells[0] = {x: this.center.x + 1, y: this.center.y};
-            this.cells[2] = {x: this.center.x-1, y: this.center.y};
-            this.cells[3] = {x: this.center.x-1, y: this.center.y + 1};
-            this.state = 1;
         }else if (this.state == 1){
-            this.cells[0] = {x: this.center.x, y: this.center.y + 1};
-            this.cells[2] = {x: this.center.x, y: this.center.y -1 };
-            this.cells[3] = {x: this.center.x - 1, y: this.center.y - 1};
+            this.cells[0] = cellMatrix[this.center.y + 1][this.center.x];
+            this.cells[2] = cellMatrix[this.center.y - 1][this.center.x];
+            this.cells[3] = cellMatrix[this.center.y - 1][this.center.x - 1];
             this.state = 2;
         }else if (this.state == 2){
             if (this.center.x == 9){
-                this.move(-1);
+                this.move_x(-1);
+                this.rotate();
+            }else{
+                this.cells[0] = cellMatrix[this.center.y][this.center.x - 1];
+                this.cells[2] = cellMatrix[this.center.y][this.center.x + 1];
+                this.cells[3] = cellMatrix[this.center.y - 1][this.center.x + 1];
+                this.state = 3;
             }
-            this.cells[0] = {x: this.center.x - 1, y: this.center.y};
-            this.cells[2] = {x: this.center.x + 1, y: this.center.y};
-            this.cells[3] = {x: this.center.x + 1, y: this.center.y - 1};
-            this.state = 3;
         }else if (this.state == 3){
-            this.cells[0] = {x: this.center.x, y: this.center.y - 1};
-            this.cells[2] = {x: this.center.x, y: this.center.y + 1};
-            this.cells[3] = {x: this.center.x + 1, y: this.center.y + 1};
+            this.cells[0] = cellMatrix[this.center.y - 1][this.center.x];
+            this.cells[2] = cellMatrix[this.center.y + 1][this.center.x];
+            this.cells[3] = cellMatrix[this.center.y + 1][this.center.x + 1];
             this.state = 0;
         }
         this.draw();
@@ -336,36 +362,40 @@ class Lmirrored extends Figure{
     constructor(){
         super({x: random(1, 9), y: 0}, 5);
         this.state = 0;
-        this.center = this.cells[1];
     }
 
     rotate(){
         this.clear();
+        this.center = this.cells[1];
         if (this.state == 0){
             if (this.center.x == 9){
-                this.move(-1);
+                this.move_x(-1);
+                this.rotate();
+            }else{
+                this.cells[0] = cellMatrix[this.center.y][this.center.x + 1];
+                this.cells[2] = cellMatrix[this.center.y][this.center.x - 1];
+                this.cells[3] = cellMatrix[this.center.y - 1][this.center.x - 1];
+                this.state = 1;
             }
-            this.cells[0] = {x: this.center.x + 1, y: this.center.y};
-            this.cells[2] = {x: this.center.x - 1, y: this.center.y};
-            this.cells[3] = {x: this.center.x - 1, y: this.center.y - 1};
-            this.state = 1;
         }else if (this.state == 1){
-            this.cells[0] = {x: this.center.x, y: this.center.y + 1};
-            this.cells[2] = {x: this.center.x, y: this.center.y - 1};
-            this.cells[3] = {x: this.center.x + 1, y: this.center.y - 1};
+            this.cells[0] = cellMatrix[this.center.y + 1][this.center.x];
+            this.cells[2] = cellMatrix[this.center.y - 1][this.center.x];
+            this.cells[3] = cellMatrix[this.center.y - 1][this.center.x + 1];
             this.state = 2;
         }else if (this.state == 2){
             if (this.center.x == 0){
-                this.move(1);
+                this.move_x(1);
+                this.rotate();
+            }else{
+                this.cells[0] = cellMatrix[this.center.y][this.center.x - 1];
+                this.cells[2] = cellMatrix[this.center.y][this.center.x + 1];
+                this.cells[3] = cellMatrix[this.center.y + 1][this.center.x + 1];
+                this.state = 3;
             }
-            this.cells[0] = {x: this.center.x - 1, y: this.center.y};
-            this.cells[2] = {x: this.center.x + 1, y: this.center.y};
-            this.cells[3] = {x: this.center.x + 1, y: this.center.y + 1};
-            this.state = 3;
         }else if (this.state == 3){
-            this.cells[0] = {x: this.center.x, y: this.center.y - 1};
-            this.cells[2] = {x: this.center.x, y: this.center.y + 1};
-            this.cells[3] = {x: this.center.x - 1, y: this.center.y + 1};
+            this.cells[0] = cellMatrix[this.center.y - 1][this.center.x];
+            this.cells[2] = cellMatrix[this.center.y + 1][this.center.x];
+            this.cells[3] = cellMatrix[this.center.y + 1][this.center.x - 1];
             this.state = 0;
         }
         this.draw();
@@ -378,38 +408,41 @@ class T_piece extends Figure{
     constructor(){
         super({x: random(0, 7), y: 0}, 6);
         this.state = 0;
-        this.center = this.cells[1];
     }
 
     rotate(){
+        this.center = this.cells[1];
         this.clear();
         if (this.state == 0){
-            this.cells[2] = {x: this.center.x, y: this.center.y - 1};
+            this.cells[2] = cellMatrix[this.center.y - 1][this.center.x];
             this.state = 1;
         }else if (this.state == 1){
             if (this.center.x == 9){
-                this.move(-1);
+                this.move_x(-1);
+                this.rotate();
+            }else{
+                this.cells[3] = cellMatrix[this.center.y][this.center.x + 1];
+                this.state = 2;
             }
-            this.cells[3] = {x: this.center.x + 1, y: this.center.y};
-            this.state = 2;
         }else if (this.state == 2){
-            this.cells[0] = {x: this.center.x, y: this.center.y + 1};
+            this.cells[0] = cellMatrix[this.center.y + 1][this.center.x];
             this.state = 3;
         }else if (this.state == 3){
             if (this.center.x == 0){
-                this.move(1);
+                this.move_x(1);
+                this.rotate();
+            }else{
+                this.cells[0] = cellMatrix[this.center.y][this.center.x - 1];
+                this.cells[2] = cellMatrix[this.center.y][this.center.x + 1];
+                this.cells[3] = cellMatrix[this.center.y + 1][this.center.x];
+                this.state = 0;
             }
-            this.cells[0] = {x: this.center.x - 1, y: this.center.y};
-            this.cells[2] = {x: this.center.x + 1, y: this.center.y}
-            this.cells[3] = {x: this.center.x, y: this.center.y + 1};
-            this.state = 0;
         }
         this.draw();
         this.calculate_bottom();
         this.update_extremes();
     }
 }
-
 
 
 var current_figures = [];
@@ -421,7 +454,7 @@ function update_figures(){
 
 function createFigure(){
     current_figures.push(new pieces[random(0, pieces.length - 1)]());
-    //current_figures.push(new T_piece());
+    //current_figures.push(new Line2());
     active_figure = current_figures[current_figures.length - 1];
 
 }
